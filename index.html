@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Peta 3D Kotabaru</title>
+
+  <!-- CesiumJS -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="./css/style.css" />
+
+  <style>
+    /* Peta full screen */
+    html, body, #cesiumContainer {
+      width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+    }
+
+    /* Ukuran InfoBox Cesium standar */
+    #cesiumContainer .cesium-infoBox {
+      width: 600px !important;
+      height: 400px !important;
+    }
+    #cesiumContainer .cesium-infoBox-iframe {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Kustom InfoBox (jika dipakai manual) */
+    #custom-infoBox {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 300px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      position: absolute;
+      top: 0; left: 0;
+      width: 300px;
+      height: 100%;
+      background: #fff;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+      padding: 20px;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+      transform: translateX(0);
+      z-index: 10;
+    }
+    /* Jika hidden, geser keluar layar kiri */
+    #sidebar.hidden {
+      transform: translateX(-100%);
+    }
+
+    /* Handle drag di tepi kanan sidebar */
+    #dragHandle {
+      position: absolute;
+      top: 0; right: -5px;
+      width: 10px;
+      height: 100%;
+      cursor: ew-resize;
+      background: transparent;
+      z-index: 12;
+    }
+
+    /* Tombol Toggle */
+    #toggleBtn {
+      position: absolute;
+      top: 20px;
+      left: 310px;
+      background: #0077cc;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      z-index: 11;
+      transition: left 0.3s ease;
+    }
+
+    /* Geser tombol toggle ke kiri kalau sidebar hidden */
+    #sidebar.hidden + #toggleBtn {
+      left: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar Latar Belakang Kotabaru -->
+  <div id="sidebar" class="hidden">
+    <h2>Sejarah Kotabaru</h2>
+  
+      <!-- Gambar dan sumbernya -->
+  <img src="./images/kotabaru.jpg" alt="Kotabaru Yogyakarta" style="width: 100%; border-radius: 8px; margin-bottom: 8px;">
+  <p style="font-size: 0.85em; color: #555; margin-top: 0; margin-bottom: 15px;">
+    Sumber gambar: <a href="https://kebudayaan.jogjakota.go.id/page/index/kawasan-cagar-budaya-kotabaru" target="_blank" style="color: #0077cc;">DinasKebudayaanYogyakarta.com</a>
+  </p>
+    <p>
+      Pada mulanya, pemukiman masyarakat Eropa di Yogyakarta berpusat di sekitar Loji Kecil atau Benteng Vredeburg. Seiring dengan meningkatnya aktivitas ekonomi—terutama akibat berkembangnya industri perkebunan tebu dan pabrik gula—jumlah penduduk Eropa di wilayah ini pun bertambah secara signifikan. Pertumbuhan populasi ini menyebabkan kebutuhan akan tempat tinggal juga meningkat. Untuk mengatasinya, Residen Yogyakarta saat itu, Cornelis Cane, mengajukan permohonan kepada Sultan Hamengku Buwono VII guna memperluas wilayah pemukiman Eropa ke arah utara. Izin resmi untuk pembangunan kawasan baru ini akhirnya diberikan melalui Rijksblad Sultan Jogjakarta No. 12 tahun 1917, yang menjadi dasar hukum pendirian kawasan Kotabaru (Nieuwe Wijk) di sebelah timur Kali Code. Proses pembangunan dimulai pada tahun 1920 oleh sebuah komite khusus yang dibentuk oleh Residen dan Sultan.
+    </p>
+    <p>
+      Kawasan Kotabaru dirancang dengan konsep garden city, yaitu kota taman yang memberikan porsi lebih besar pada ruang terbuka dan area hijau. Rumah-rumah dibangun lebih mundur dari tepi jalan, dan terdapat pemisahan yang jelas antara area hunian dan fasilitas publik. Kotabaru dirancang sebagai kawasan mandiri yang menyediakan fasilitas umum lengkap untuk memenuhi kebutuhan warganya dalam satu lingkungan. Secara tata ruang, kawasan ini disusun secara radial, dengan lapangan pusat yang menjadi titik tengah, serta jalan-jalan utama yang menghubungkannya. Komposisi kawasan ini mencerminkan pembagian dua zona: bagian barat untuk permukiman, sedangkan bagian timur diperuntukkan bagi bangunan-bangunan dengan fungsi publik.
+    </p>
+
+    <!-- Pegangan drag di samping -->
+    <div id="dragHandle"></div>
+  </div>
+
+  <!-- Tombol Toggle Sidebar -->
+  <button id="toggleBtn">Sejarah Kotabaru</button>
+
+  <!-- Peta Cesium -->
+  <div id="cesiumContainer"></div>
+
+  <!-- Custom InfoBox (opsional) -->
+  <div id="custom-infoBox" style="display:none;">
+    <h3 id="info-title"></h3>
+    <img id="info-image" src="" alt="Bangunan" style="max-width:100%; margin-top:10px; border-radius:8px;">
+    <p id="info-story"></p>
+  </div>
+
+  <!-- Script utama Cesium -->
+  <script src="./js/index.js" type="module"></script>
+
+  <!-- Script Sidebar Drag Toggle -->
+  <script>
+    // Elemen yang dipakai
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const dragHandle = document.getElementById('dragHandle');
+
+    // Tombol klik: toggle buka/tutup sidebar
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('hidden');
+      toggleBtn.textContent = sidebar.classList.contains('hidden') ? 'Sejarah Kotabaru' : 'Tutup';
+    });
+
+    // Drag handle: deteksi geser
+    let isDragging = false;
+    let startX = 0;
+
+    dragHandle.addEventListener('mousedown', e => {
+      isDragging = true;
+      startX = e.clientX;
+      document.body.style.userSelect = 'none'; // agar teks tidak ke-blok saat drag
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+
+      const deltaX = e.clientX - startX;
+
+      if (deltaX < -50) {
+        sidebar.classList.add('hidden');
+        toggleBtn.textContent = 'Sejarah Kotabaru';
+        isDragging = false;
+      } else if (deltaX > 50) {
+        sidebar.classList.remove('hidden');
+        toggleBtn.textContent = 'Tutup';
+        isDragging = false;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      document.body.style.userSelect = '';
+    });
+  </script>
+</body>
+</html>
